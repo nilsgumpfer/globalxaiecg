@@ -1,0 +1,16 @@
+# Python 3.10
+# Pinned to the versions the published results were produced with.
+
+# Core analysis (figures, tables, metrics)
+numpy==2.2.6
+pandas==2.3.3
+scipy==1.15.3
+matplotlib==3.10.9
+openpyxl==3.1.5
+pypdf==6.13.2
+
+# Local example explanations only (main.py --steps local)
+tensorflow==2.21.0
+signxai==1.1.5
+wfdb==4.3.1
+neurokit2==0.2.13
