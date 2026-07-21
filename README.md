@@ -2,7 +2,7 @@
 
 This repository contains the code and supplementary material accompanying the paper entitled
 "Beyond Local Inspection: Global, Guideline-Grounded Evaluation of Post-hoc XAI Methods for ECG
-Classification", submitted to *Scientific Reports*.
+Classification"
 
 Citation:
 
