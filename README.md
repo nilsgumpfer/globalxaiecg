@@ -9,7 +9,6 @@ Citation:
 ```bibtex
 @Article{Gumpfer2026,
   author  = {Gumpfer, Nils and Guckert, Michael and Sossalla, Samuel and A{\ss}mus, Birgit and Hannig, Jennifer},
-  journal = {Scientific Reports},
   title   = {{Beyond Local Inspection: Global, Guideline-Grounded Evaluation of Post-hoc XAI Methods for ECG Classification}},
   year    = {2026},
 }
