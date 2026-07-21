@@ -149,7 +149,6 @@ available, pass `--no-usetex` to fall back to matplotlib's built-in mathtext. Ru
 | `hist_<pathology>.pdf` | Relevance density per method, lead and timestep |
 | `correlation.png` | Relevance against signal amplitude, per method and pathology |
 | `beat_<pathology>.pdf` | Local explanation of an example beat next to the global pattern |
-
 | `coverage.xlsx`, `correlation.xlsx` | Raw metrics all tables are derived from |
 
 Each `beat_<pathology>.pdf` shows the lead group the condition is diagnosed from, which is the
