@@ -89,11 +89,11 @@ results/
 
 ## Models
 
-The readily trained detectors are provided in `models/`, one per pathology, as a Keras `model.json`
-architecture with matching `weights.h5`. These are the four binary CNNs evaluated in the paper,
-the same models published with the preceding AIME2024 study
-(https://github.com/nilsgumpfer/AIME2024). They are needed only for the local-explanation figures,
-which recompute their explanations from scratch.
+The readily trained detectors are the four binary CNNs evaluated in the paper, the same models
+published with the preceding AIME2024 study (https://github.com/nilsgumpfer/AIME2024). Rather
+than vendoring them here, `prepare.sh` downloads them from that repository into `models/`, one
+folder per pathology, as a Keras `model.json` architecture with matching `weights.h5`. They are
+needed only for the local-explanation figures, which recompute their explanations from scratch.
 
 ## Code
 

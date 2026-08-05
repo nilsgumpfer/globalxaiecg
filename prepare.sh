@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Set up everything main.py needs: the Python packages, the four PTB-XL example records used for
-# the local explanations, and the precomputed beat arrays the global analysis runs on.
+# Set up everything main.py needs: the Python packages, the four trained detectors, the four
+# PTB-XL example records used for the local explanations, and the precomputed beat arrays the
+# global analysis runs on.
 #
 # The beat arrays are 12 GB unpacked and are therefore hosted separately rather than in this
 # repository. The archive is ~2 GB to download and needs 12 GB of free disk space once unpacked.
@@ -13,8 +14,28 @@ cd "$(dirname "$0")"
 # the preview page.
 BEATS_URL="https://www.dropbox.com/scl/fi/9z4uuypkbcbtcz9q8p65x/globalxaiecg_beats.zip?rlkey=wyu4ky07928sn1tuiofthr14g&dl=1"
 
+# The trained detectors live in the AIME2024 repository and are fetched from there rather than
+# vendored here, so both projects stay in sync with a single source of truth.
+MODELS_BASE_URL="https://raw.githubusercontent.com/nilsgumpfer/AIME2024/main/models"
+
 echo "== Installing Python packages =="
 pip3 install -r requirements.txt
+
+echo
+echo "== Downloading trained detectors =="
+# One Keras model.json + weights.h5 per pathology, from the AIME2024 study repository.
+mkdir -p models
+for P in AVB ISCH RBBB LBBB; do
+  mkdir -p "models/$P"
+  for F in model.json weights.h5; do
+    if [ -f "models/$P/$F" ]; then
+      echo "  $P/$F already present, skipping"
+    else
+      curl -fsSL -o "models/$P/$F" "${MODELS_BASE_URL}/${P}/${F}"
+      echo "  $P/$F"
+    fi
+  done
+done
 
 echo
 echo "== Downloading PTB-XL example records =="
