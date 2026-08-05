@@ -11,6 +11,8 @@ Citation:
   author  = {Gumpfer, Nils and Guckert, Michael and Sossalla, Samuel and A{\ss}mus, Birgit and Hannig, Jennifer},
   title   = {{Beyond Local Inspection: Global, Guideline-Grounded Evaluation of Post-hoc XAI Methods for ECG Classification}},
   year    = {2026},
+  eprint  = {2607.24035},
+  doi     = {10.48550/arXiv.2607.24035}, 
 }
 ```
 
