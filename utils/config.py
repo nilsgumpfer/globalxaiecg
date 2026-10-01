@@ -61,7 +61,7 @@ def beat_figure_leads(pathology):
     """Lead group shown in the local-explanation beat figure for a pathology."""
     return BEAT_FIGURE_LEADS.get(pathology, PRECORDIAL_LEADS)
 
-# Guideline-derived ground-truth segment masks. Each list holds 50 bins of 10 timesteps
+# Guideline-derived temporal segment masks. Each list holds 50 bins of 10 timesteps
 # (500 timesteps per resampled beat, in the rotated frame with the R-peak at the seam).
 # A 1 marks a timestep that the clinical guidelines consider diagnostic for the pathology.
 P_SEGMENTS = {

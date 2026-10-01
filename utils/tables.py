@@ -135,7 +135,7 @@ def generate_combined_table(plot_dir, pathologies):
         r'\cmidrule(lr){' + str(n_path + 3) + r'-' + str(n_path * 3 + 5) + r'}',
         r'\textbf{Method}'
         r' & \multicolumn{' + str(n_path) + r'}{c}{\textbf{Pathology}} & \textbf{Mean}'
-        r' & \multicolumn{' + str(n_path) + r'}{c}{\textbf{Coverage (GT, \%)}} & \textbf{Mean}'
+        r' & \multicolumn{' + str(n_path) + r'}{c}{\textbf{Coverage (TM, \%)}} & \textbf{Mean}'
         r' & \multicolumn{' + str(n_path) + r'}{c}{\textbf{Normalized (NCov, \%)}} & \textbf{Mean}'
         r' & \textbf{$NCov_{min}$} \\',
         r'\cmidrule(lr){2-' + str(n_path + 1) + r'}',
