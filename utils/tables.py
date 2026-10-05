@@ -12,8 +12,9 @@ mean, standard deviation or confidence interval inherits display rounding.
 """
 import numpy as np
 import pandas as pd
+from scipy.stats import spearmanr
 
-from utils.beats import build_dense_mask, compute_ncov, compute_ncov_exact, compute_pop_cov, load_and_normalize_R_beats, shift_mask
+from utils.beats import build_dense_mask, compute_ncov, compute_ncov_exact, compute_pop_cov, load_and_normalize_R_beats, load_ecg_beats, load_relevance_beats, shift_mask
 from utils.config import P_SEGMENTS, pretty_method_name
 
 
@@ -287,6 +288,144 @@ def mask_sensitivity_analysis(pathologies, methods, result_dir, plot_dir,
     df = pd.DataFrame({'{:+d} ts'.format(k): {m: round(ncov_min[m][k], 1) for m in methods} for k in offsets})
     df.index = [pretty_method_name(m) for m in methods]
     df.to_excel('{}/mask_sensitivity.xlsx'.format(plot_dir))
+
+
+def scc_confidence_intervals(pathologies, methods, result_dir, plot_dir,
+                             n_bootstrap=1000, pairs_per_record=250, ci_level=0.95, seed=42):
+    """
+    Recording-level bootstrap confidence intervals for the amplitude-relevance SCC.
+
+    The SCC point estimate pools all (|x_i|, |R_i|) pairs, which are strongly clustered within
+    beats, leads and recordings, so an uncertainty estimate based on the number of sampled pairs
+    understates the true variability. Here the resampling unit is instead the recording: for each
+    of n_bootstrap draws we resample the analysed (true-positive) recordings with replacement and
+    recompute the SCC, so the interval reflects uncertainty over which recordings were in the
+    cohort. Within each recording a fixed number of valid (non-NaN) value pairs is used, which
+    keeps the pooled sample at a tractable, comparable size across draws.
+
+    The published point estimate (correlation.xlsx) is reported together with the 2.5th and 97.5th
+    percentiles of the bootstrap distribution.
+    """
+    print('Running SCC confidence intervals (n={})...'.format(n_bootstrap))
+
+    lo_pct = (1.0 - ci_level) / 2.0 * 100.0
+    hi_pct = 100.0 - lo_pct
+
+    # Published SCC point estimates (index: internal method name, columns: pathologies).
+    corr_point = pd.read_excel('{}/correlation.xlsx'.format(plot_dir), index_col=0)
+
+    ci = {p: {} for p in pathologies}
+
+    for p in pathologies:
+        rng = np.random.RandomState(seed)
+
+        ecg = np.abs(load_ecg_beats(result_dir, p))
+        n_rec, n_beat = ecg.shape[0], ecg.shape[1]
+        ecg = ecg.reshape(n_rec, n_beat, -1)
+        per_beat = ecg.shape[2]
+
+        # The resampling unit is the analysed recording, but each recording holds one or two beats
+        # and the point estimate pools all pairs, so a two-beat recording contributes twice as many
+        # pairs as a one-beat one. To match that weighting we sample a fixed number of valid
+        # positions per beat and keep the beat as the inner unit, so resampling a recording pulls in
+        # all of its beats. beat_table maps each valid recording to its (up to two) beat rows.
+        beat_x, beat_rec, beat_sel = [], [], []   # per collected beat: x sample, record id, positions
+        valid_rec = []
+
+        for i in range(n_rec):
+            beats_here = []
+
+            for b in range(n_beat):
+                valid = np.where(~np.isnan(ecg[i, b]))[0]
+
+                if len(valid) == 0:
+                    continue
+
+                beats_here.append((b, valid[rng.randint(0, len(valid), pairs_per_record)]))
+
+            if not beats_here:
+                continue
+
+            rid = len(valid_rec)
+            valid_rec.append(i)
+
+            for b, pos in beats_here:
+                beat_rec.append(rid)
+                beat_sel.append(b * per_beat + pos)
+                beat_x.append(ecg[i, b, pos])
+
+        valid_rec = np.array(valid_rec)
+        beat_rec = np.array(beat_rec)
+        beat_sel = np.array(beat_sel)                          # (n_beats, pairs_per_record)
+        beat_x = np.array(beat_x)                              # (n_beats, pairs_per_record)
+        n_valid = len(valid_rec)
+
+        # beat_table[r] holds the beat-row indices of recording r, padded to two with -1.
+        beat_table = np.full((n_valid, n_beat), -1, dtype=int)
+        counts = np.zeros(n_valid, dtype=int)
+
+        for row, rid in enumerate(beat_rec):
+            beat_table[rid, counts[rid]] = row
+            counts[rid] += 1
+
+        # Shared bootstrap draws across methods, so the intervals are comparable and reproducible.
+        draws = np.array([rng.randint(0, n_valid, n_valid) for _ in range(n_bootstrap)])
+
+        # Flattened x of the full recording arrays, for gathering the relevance at the same positions.
+        for m in methods:
+            print(' ', p, m)
+            R = np.abs(np.nan_to_num(load_relevance_beats(result_dir, p, m))).reshape(n_rec, -1)
+            beat_r = np.take_along_axis(R[valid_rec[beat_rec]], beat_sel, axis=1)   # (n_beats, K)
+
+            boot = np.empty(n_bootstrap)
+
+            for d in range(n_bootstrap):
+                rows = beat_table[draws[d]]        # (n_valid, n_beat), -1 where a recording has no 2nd beat
+                sb = rows[rows >= 0]               # selected beat rows, with recording multiplicity
+                boot[d] = spearmanr(beat_r[sb].ravel(), beat_x[sb].ravel()).correlation
+
+            point = float(corr_point.loc[m, p]) if m in corr_point.index else float(np.mean(boot))
+            ci[p][m] = (point, float(np.percentile(boot, lo_pct)), float(np.percentile(boot, hi_pct)))
+
+    rows = []
+
+    for m in methods:
+        row = {'Method': pretty_method_name(m)}
+
+        for p in pathologies:
+            pt, lo, hi = ci[p][m]
+            row['SCC {} point'.format(p)] = round(pt, 2)
+            row['SCC {} lo'.format(p)] = round(lo, 2)
+            row['SCC {} hi'.format(p)] = round(hi, 2)
+
+        rows.append(row)
+
+    pd.DataFrame(rows).set_index('Method').to_excel('{}/scc_ci.xlsx'.format(plot_dir))
+
+    p_headers = ' & '.join(r'\textbf{{SCC {}}} (95\,\% CI)'.format(p) for p in pathologies)
+    lines = [
+        r'\begin{tabular}{l' + 'r' * len(pathologies) + '}',
+        r'\toprule',
+        r'\textbf{Method} & ' + p_headers + r' \\',
+        r'\midrule',
+    ]
+
+    for row in rows:
+        cells = [row['Method']]
+
+        for p in pathologies:
+            cells.append(r'{:.2f} [{:.2f}, {:.2f}]'.format(row['SCC {} point'.format(p)], row['SCC {} lo'.format(p)], row['SCC {} hi'.format(p)]))
+
+        lines.append(' & '.join(cells) + r' \\')
+
+    lines += [r'\bottomrule', r'\end{tabular}']
+
+    tex_path = '{}/scc_ci_table.tex'.format(plot_dir)
+
+    with open(tex_path, 'w') as f:
+        f.write('\n'.join(lines))
+
+    print('  Saved', tex_path)
 
 
 def bootstrap_confidence_intervals(pathologies, methods, result_dir, plot_dir,

@@ -85,13 +85,14 @@ def main():
         analyze_combined(args.pathologies, args.methods, args.result_dir, args.plot_dir)
 
     if 'tables' in steps:
-        from utils.tables import bootstrap_confidence_intervals, generate_combined_table, generate_sd_values, mask_sensitivity_analysis
+        from utils.tables import bootstrap_confidence_intervals, generate_combined_table, generate_sd_values, mask_sensitivity_analysis, scc_confidence_intervals
 
         print('Generating tables...')
         generate_combined_table(args.plot_dir, args.pathologies)
         generate_sd_values(args.plot_dir, args.pathologies)
         mask_sensitivity_analysis(args.pathologies, args.methods, args.result_dir, args.plot_dir)
         bootstrap_confidence_intervals(args.pathologies, args.methods, args.result_dir, args.plot_dir, n_bootstrap=args.n_bootstrap)
+        scc_confidence_intervals(args.pathologies, args.methods, args.result_dir, args.plot_dir, n_bootstrap=args.n_bootstrap)
 
     if 'local' in steps:
         from utils.figures import plot_example_beat_figures
